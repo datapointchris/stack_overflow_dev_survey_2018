@@ -174,10 +174,10 @@ ui <- dashboardPage(
         tabName = "salary_gender",
         fluidPage( # Page 4
           fluidRow(
-            plotOutput("salary_1")
+            plotOutput("salary_top_5")
           ),
           fluidRow(
-            plotOutput("salary_2")
+            plotOutput("salary_equal_1")
           )
         )
       ),
@@ -600,7 +600,10 @@ server <- function(input, output, session) {
     output$plot1 <- renderPlot({
       ggplot(data = var_data_filtered(), aes_string(x = typer1, y = "count", fill = "gender")) +
         geom_bar(stat = "identity") +
-        labs(x = "", y = yboi, title = titleboi, subtitle = paste0(counChoice())) +
+        labs(x = "", 
+        y = yboi, 
+        title = titleboi, 
+        subtitle = paste0(counChoice())) +
         my_theme_sizes +
         gender_fill_colors +
         theme(axis.text.x = element_text(angle = 5, vjust = -0.01))
@@ -625,7 +628,7 @@ server <- function(input, output, session) {
         my_theme_sizes +
         gender_fill_colors
     })
-  }) # observeEvent
+  })
 
   # Page 3 - Student Analysis by Country
 
@@ -670,71 +673,47 @@ server <- function(input, output, session) {
 
   # Page 4 - Salary by Gender
 
-  gender.dist.log <- dev %>%
-    select(gender, converted_salary) %>%
-    filter(!is.na(converted_salary)) %>%
-    filter(gender == "Male" | gender == "Female") %>%
-    group_by(gender)
-
-  g1 <- ggplot(gender.dist.log, aes(x = converted_salary)) +
-    geom_density(aes(fill = gender), alpha = 0.6) +
-    scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
-    scale_x_continuous(labels = function(x) format(x, scientific = FALSE)) +
-    coord_cartesian(xlim = c(0, 250000)) +
-    labs(
-      y = "Density",
-      x = "Converted Salary",
-      title = "Distribution of salary"
-    ) +
-    my_theme_sizes +
-    mf_fill_colors
-
-  g2 <- ggplot(gender.dist.log, aes(x = converted_salary)) +
-    geom_density(aes(fill = gender), alpha = 0.6) +
-    # scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
-    scale_x_log10() +
-    # scale_x_continuous(labels = function(x) format(x, scientific = FALSE)) +
-    # coord_cartesian(xlim=c(0,250000)) +
-    labs(
-      y = "Density",
-      x = "Converted Salary",
-      title = "Distribution of salary"
-    ) +
-    my_theme_sizes +
-    mf_fill_colors
-
-  output$salary_1 <- renderPlot({
-    plot_grid(g1, g2, align = "h", nrow = 2)
-  })
-
-  country.sal <- dev %>%
-    filter(employment == "Employed full-time") %>%
-    filter(!is.na(country)) %>%
-    group_by(country) %>%
-    mutate(count = n()) %>%
-    filter(count > 2500) %>%
-    summarise(m.sal = median(converted_salary, na.rm = T)) %>%
-    arrange(m.sal) %>%
-    select(country) %>%
-    mutate(country = factor(country))
-
-  dist.sal <- dev %>%
+  dist_sal <- dev %>%
     filter(employment %in% "Employed full-time") %>%
     filter(gender == "Male" | gender == "Female") %>%
     group_by(country) %>%
     mutate(count = n()) %>%
-    filter(count > 2500) %>%
+    filter(count > 1500) %>%
+    filter(!is.na(converted_salary)) %>%
     ungroup(country)
 
-  output$salary_2 <- renderPlot({
-    ggplot(dist.sal) +
+  output$salary_top_5 <- renderPlot({
+    ggplot(dist_sal) +
       geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
       scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
       coord_flip(ylim = c(0, 250000)) +
       labs(
         x = "Countries",
         y = "Converted Salary",
-        title = "Salary of top 4 countries"
+        title = "Salary of top 5 countries"
+      ) +
+      my_theme_sizes +
+      mf_fill_colors
+  })
+
+  dist_sal2 <- dev %>%
+    filter(employment %in% "Employed full-time") %>%
+    filter(gender == "Male" | gender == "Female") %>%
+    group_by(country) %>%
+    mutate(count = n()) %>%
+    filter(count == 1) %>%
+    filter(!is.na(converted_salary)) %>%
+    ungroup(country)
+
+  output$salary_equal_1 <- renderPlot({
+    ggplot(dist_sal2) +
+      geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
+      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+      coord_flip(ylim = c(0, 250000)) +
+      labs(
+        x = "Countries",
+        y = "Converted Salary",
+        title = "Salary of countries with only one reported salary"
       ) +
       my_theme_sizes +
       mf_fill_colors
