@@ -2,6 +2,8 @@
 
 # DEPLOY
 # rsconnect::deployApp('dashboard.R') # nolint
+# RUN
+# shiny::runApp('app/dashboard.R') # nolint
 
 library(shiny)
 library(shinydashboard)
