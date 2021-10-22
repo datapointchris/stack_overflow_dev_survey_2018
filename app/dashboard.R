@@ -1,5 +1,8 @@
 ## Dev Survey Shiny App ##
 
+# DEPLOY
+# rsconnect::deployApp('dashboard.R') # nolint
+
 library(shiny)
 library(shinydashboard)
 library(treemapify)
@@ -515,11 +518,11 @@ server <- function(input, output, session) {
 
   # Page 2 - Employment / Age by Country
 
-  cateChoice <- reactive({
+  category_choice <- reactive({
     input$rb_choice
   })
 
-  counChoice <- reactive({
+  country_choice <- reactive({
     input$user_choice
   })
 
@@ -568,42 +571,44 @@ server <- function(input, output, session) {
     })
 
     typer1 <- case_when(
-      cateChoice() == "Employment Status" ~ "employment",
-      cateChoice() == "Student Status" ~ "student",
-      cateChoice() == "Age Groups" ~ "age"
+      category_choice() == "Employment Status" ~ "employment",
+      category_choice() == "Student Status" ~ "student",
+      category_choice() == "Age Groups" ~ "age"
     )
 
     titleboi <- case_when(
-      cateChoice() == "Employment Status" ~ "Count of each employemnt status by Country",
-      cateChoice() == "Student Status" ~ "Count of each student status by Country",
-      cateChoice() == "Age Groups" ~ "Count of each age group by Country"
+      category_choice() == "Employment Status" ~ "Count of each employemnt status by Country",
+      category_choice() == "Student Status" ~ "Count of each student status by Country",
+      category_choice() == "Age Groups" ~ "Count of each age group by Country"
     )
 
     titleboi2 <- case_when(
-      cateChoice() == "Employment Status" ~ "Total count of employemnt status of each gender",
-      cateChoice() == "Student Status" ~ "Total count of student status of each gender",
-      cateChoice() == "Age Groups" ~ "Total count of age group of each gender"
+      category_choice() == "Employment Status" ~ "Total count of employemnt status of each gender",
+      category_choice() == "Student Status" ~ "Total count of student status of each gender",
+      category_choice() == "Age Groups" ~ "Total count of age group of each gender"
     )
 
     xboi <- case_when(
-      cateChoice() == "Employment Status" ~ "input$user_choice",
-      cateChoice() == "Student Status" ~ "Count of Student Status",
-      cateChoice() == "Age Groups" ~ "Count of Age Groups"
+      category_choice() == "Employment Status" ~ "input$user_choice",
+      category_choice() == "Student Status" ~ "Count of Student Status",
+      category_choice() == "Age Groups" ~ "Count of Age Groups"
     )
 
     yboi <- case_when(
-      cateChoice() == "Employment Status" ~ "Count of Employemnt Status",
-      cateChoice() == "Student Status" ~ "Count of Student Status",
-      cateChoice() == "Age Groups" ~ "Count of Age Groups"
+      category_choice() == "Employment Status" ~ "Count of Employemnt Status",
+      category_choice() == "Student Status" ~ "Count of Student Status",
+      category_choice() == "Age Groups" ~ "Count of Age Groups"
     )
 
     output$plot1 <- renderPlot({
       ggplot(data = var_data_filtered(), aes_string(x = typer1, y = "count", fill = "gender")) +
         geom_bar(stat = "identity") +
-        labs(x = "", 
-        y = yboi, 
-        title = titleboi, 
-        subtitle = paste0(counChoice())) +
+        labs(
+          x = "",
+          y = yboi,
+          title = titleboi,
+          subtitle = paste0(country_choice())
+        ) +
         my_theme_sizes +
         gender_fill_colors +
         theme(axis.text.x = element_text(angle = 5, vjust = -0.01))
@@ -647,7 +652,7 @@ server <- function(input, output, session) {
         stat = "count"
       ) +
       labs(
-        title = paste0(counChoice()),
+        title = paste0(country_choice()),
         x = "Formal Education",
         y = "Count of Formal Education Degrees"
       ) +
@@ -662,7 +667,7 @@ server <- function(input, output, session) {
         stat = "count"
       ) +
       labs(
-        title = paste0(counChoice()),
+        title = paste0(country_choice()),
         x = "Undergraduate Majors",
         y = "Count of Education Majors"
       ) +

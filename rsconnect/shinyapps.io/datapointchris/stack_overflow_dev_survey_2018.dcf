@@ -1,0 +1,11 @@
+name: stack_overflow_dev_survey_2018
+title:
+username:
+account: datapointchris
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4937287
+bundleId: 5168124
+url: https://datapointchris.shinyapps.io/stack_overflow_dev_survey_2018/
+when: 1634933604.24453
+lastSyncTime: 1634933604.24454
