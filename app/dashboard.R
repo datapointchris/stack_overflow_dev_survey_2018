@@ -1,7 +1,7 @@
 ## Dev Survey Shiny App ##
 
 # DEPLOY
-# rsconnect::deployApp('dashboard.R') # nolint
+# rsconnect::deployApp('app/dashboard.R') # nolint
 # RUN
 # shiny::runApp('app/dashboard.R') # nolint
 
@@ -20,7 +20,7 @@ library(cowplot)
 library(knitr)
 library(ggalluvial)
 
-dev <- read.csv("cleaned_dev_survey.csv")
+dev <- read.csv("app/cleaned_dev_survey.csv")
 
 ui <- dashboardPage(
   dashboardHeader(
