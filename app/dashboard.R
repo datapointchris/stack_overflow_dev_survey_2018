@@ -24,27 +24,31 @@ dev <- read.csv("cleaned_dev_survey.csv")
 
 ui <- dashboardPage(
   dashboardHeader(
-    title = "Dev Survey Shiny App",
+    title = "Developer Survey Analysis",
     titleWidth = 260
   ),
   dashboardSidebar(
     width = 260,
     sidebarMenu(
-      menuItem("Gender / Sexual Orientation by Country", tabName = "gender_sex_country"),
-      menuItem("Employment / Age by Country", tabName = "gender_edu_age"),
-      menuItem("Student Analysis by Country", tabName = "student_analysis_country"),
-      menuItem("Salary by Gender", tabName = "salary_gender"),
-      menuItem("Salary by Gender Country Comparison", tabName = "salary_gender_country_comparison"),
-      menuItem("Coding Years vs Satisfaction", tabName = "code_year_satisfy"),
-      menuItem("Satisfied Long Term Coders", tabName = "long_term_coders"),
-      menuItem("Salary Considerations", tabName = "salary_considerations")
+      menuItem("Stats by Country",
+        tabName = "stats_by_country",
+        startExpanded = TRUE,
+        menuSubItem("Gender / Sexual Orientation", tabName = "gender_sex_country"),
+        menuSubItem("Employment / Education by Gender ", tabName = "gender_edu_age"),
+        menuSubItem("Salary by Gender", tabName = "salary_gender_country_comparison"),
+        menuSubItem("Student / Education Analysis", tabName = "student_analysis_country")
+      ),
+      menuItem("Average Salaries by Gender", tabName = "salary_gender"),
+      menuItem("Average Salaries by Experience", tabName = "average_salaries_experience"),
+      menuItem("Satisfaction vs Experience", tabName = "code_year_satisfy"),
+      menuItem("Long Term Satisfaction", tabName = "long_term_coders")
     )
   ),
   dashboardBody(
     tabItems(
       tabItem(
         tabName = "gender_sex_country",
-        fluidPage( # Page 1
+        fluidPage( ### Page 1 ###
           fluidRow(
             h3("Gender / Sexual Orientation by Country", align = "center"),
             br(),
@@ -86,7 +90,7 @@ ui <- dashboardPage(
       ),
       tabItem(
         tabName = "gender_edu_age",
-        fluidPage( # Page 2
+        fluidPage( ### Page 2 ###
           fluidRow(
             column(
               width = 3,
@@ -145,50 +149,8 @@ ui <- dashboardPage(
         )
       ),
       tabItem(
-        tabName = "student_analysis_country",
-        fluidPage( # Page 3
-          fluidRow(
-            column(
-              width = 4,
-              offset = 4,
-              align = "center",
-              box(
-                width = 12,
-                title = "Student Analysis by Country",
-                status = "primary",
-                solidHeader = TRUE,
-                selectInput(
-                  inputId = "choice2",
-                  label = "",
-                  choices = unique(dev$country),
-                  selected = "United States"
-                )
-              )
-            )
-          ),
-          fluidRow(
-            plotOutput("plot2", height = 300)
-          ),
-          br(),
-          fluidRow(
-            plotOutput("undergraduate", height = 350)
-          )
-        )
-      ),
-      tabItem(
-        tabName = "salary_gender",
-        fluidPage( # Page 4
-          fluidRow(
-            plotOutput("salary_top_5")
-          ),
-          fluidRow(
-            plotOutput("salary_equal_1")
-          )
-        )
-      ),
-      tabItem(
         tabName = "salary_gender_country_comparison",
-        fluidPage( # Page 5
+        fluidPage( ### Page 3 ###
           fluidRow(
             h3("Salary by Gender Across Countries", align = "center")
           ),
@@ -257,8 +219,68 @@ ui <- dashboardPage(
         )
       ),
       tabItem(
+        tabName = "student_analysis_country",
+        fluidPage( ### Page 4 ###
+          fluidRow(
+            column(
+              width = 4,
+              offset = 4,
+              align = "center",
+              box(
+                width = 12,
+                title = "Student Analysis by Country",
+                status = "primary",
+                solidHeader = TRUE,
+                selectInput(
+                  inputId = "choice2",
+                  label = "",
+                  choices = unique(dev$country),
+                  selected = "United States"
+                )
+              )
+            )
+          ),
+          fluidRow(
+            plotOutput("plot2", height = 300)
+          ),
+          br(),
+          fluidRow(
+            plotOutput("undergraduate", height = 350)
+          )
+        )
+      ),
+      tabItem(
+        tabName = "salary_gender",
+        fluidPage( ### Page 5 ###
+          fluidRow(
+            plotOutput("salary_top_5")
+          ),
+          fluidRow(
+            plotOutput("salary_equal_1")
+          )
+        )
+      ),
+      tabItem(
+        tabName = "average_salaries_experience",
+        fluidPage( ### Page 6 ###
+          fluidRow(
+            h3("Annual Salary by Years of Professional Coding Experience", align = "center")
+          ),
+          fluidRow(
+            plotOutput("coding_vs_salary")
+          ),
+          br(),
+          fluidRow(
+            h3("Average Salaries per Satisfaction Level", align = "center")
+          ),
+          fluidRow(
+            plotOutput("salary_satisfaction")
+          )
+        )
+      ),
+      tabItem(
         tabName = "code_year_satisfy",
-        fluidPage( # Page 6
+        fluidPage( ### Page 7 ###
           fluidRow(
             h3("Years Coding vs Job and Career Satisfaction", align = "center")
           ),
@@ -322,7 +344,7 @@ ui <- dashboardPage(
       ),
       tabItem(
         tabName = "long_term_coders",
-        fluidPage( # Page 7
+        fluidPage( ### Page 8 ###
           fluidRow(
             h3("Satisfaction Level by Years Coding", align = "center")
           ),
@@ -380,24 +402,6 @@ ui <- dashboardPage(
           br(),
           fluidRow(
             plotOutput("satisfaction_level_plot", height = 600)
-          )
-        )
-      ),
-      tabItem(
-        tabName = "salary_considerations",
-        fluidPage( # Page 8
-          fluidRow(
-            h3("Annual Salary by Years of Professional Coding Experience", align = "center")
-          ),
-          fluidRow(
-            plotOutput("coding_vs_salary")
-          ),
-          br(),
-          fluidRow(
-            h3("Average Salaries per Satisfaction Level", align = "center")
-          ),
-          fluidRow(
-            plotOutput("salary_satisfaction")
           )
         )
       ) # tabItem
