@@ -1,0 +1,11 @@
+name: dev_survey_dashboard
+title:
+username:
+account: datapointchris
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4955955
+bundleId: 5176091
+url: https://datapointchris.shinyapps.io/dev_survey_dashboard/
+when: 1635193579.69484
+lastSyncTime: 1635193579.69485
