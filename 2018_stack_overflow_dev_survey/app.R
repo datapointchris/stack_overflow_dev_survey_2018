@@ -5,6 +5,8 @@
 
 library(shiny)
 library(shinydashboard)
+library(tidyverse)
+library(treemapify)
 library(ggplot2)
 library(ggthemes)
 library(reshape2)
@@ -325,9 +327,9 @@ ui <- dashboardPage(
             )
           ),
           fluidRow(
-            plotOutput("job_satisfy"),
+            plotOutput("job_satisfy", height = 350),
             br(),
-            plotOutput("career_satisfy")
+            plotOutput("career_satisfy", height = 350)
           )
         )
       ),
