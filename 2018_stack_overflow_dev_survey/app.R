@@ -7,18 +7,9 @@
 
 library(shiny)
 library(shinydashboard)
-library(treemapify)
-library(tidyverse)
 library(ggplot2)
 library(ggthemes)
 library(reshape2)
-library(highcharter)
-library(ggrepel)
-library(scales)
-library(plotly)
-library(cowplot)
-library(knitr)
-library(ggalluvial)
 
 dev <- read.csv("cleaned_dev_survey.csv")
 
