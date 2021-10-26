@@ -1,7 +1,7 @@
 ## Dev Survey Shiny App ##
 
 # DEPLOY
-# rsconnect::deployApp('/app') # nolint
+# rsconnect::deployApp('2018_stack_overflow_dev_survey') # nolint
 # RUN
 # shiny::runApp('app/dashboard.R') # nolint
 
@@ -101,7 +101,7 @@ ui <- dashboardPage(
                 status = "primary",
                 solidHeader = TRUE,
                 selectInput(
-                  inputId = "user_choice",
+                  inputId = "user_country_choice",
                   label = "",
                   choices = unique(dev$country),
                   selected = "United States"
@@ -124,7 +124,7 @@ ui <- dashboardPage(
                 status = "primary",
                 solidHeader = TRUE,
                 radioButtons(
-                  inputId = "rb_choice",
+                  inputId = "user_category_choice",
                   label = "",
                   choices = c(
                     "Employment Status",
@@ -136,14 +136,14 @@ ui <- dashboardPage(
             )
           ),
           fluidRow(
-            plotOutput("plot1", height = 350)
+            plotOutput("count_plot", height = 400)
           ),
           br(),
           fluidRow(
             column(
               width = 8,
               offset = 2,
-              plotOutput("plot4", height = 300)
+              plotOutput("gender_counts_plot", height = 300)
             )
           )
         )
@@ -232,7 +232,7 @@ ui <- dashboardPage(
                 status = "primary",
                 solidHeader = TRUE,
                 selectInput(
-                  inputId = "choice2",
+                  inputId = "student_analysis_country_choice",
                   label = "",
                   choices = unique(dev$country),
                   selected = "United States"
@@ -241,7 +241,7 @@ ui <- dashboardPage(
             )
           ),
           fluidRow(
-            plotOutput("plot2", height = 300)
+            plotOutput("student_degrees", height = 300)
           ),
           br(),
           fluidRow(
@@ -411,7 +411,9 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
 
-  # Theme
+  ##############################
+  ###          Theme         ###
+  ##############################
 
   my_theme_sizes <- theme_igray() +
     theme(
@@ -455,36 +457,38 @@ server <- function(input, output, session) {
     )
   )
 
-  # Page 1 - Gender / Sexual Orientation by Country
+  ############################################################
+  #     PAGE 1 - Gender / Sexual Orientation by Country      #
+  ############################################################
 
   country_choice_gender <- reactive({
     dev %>%
-      filter(!is.na(gender)) %>%
-      filter(!is.na(country)) %>%
       select(gender, country) %>%
+      filter(country == input$choose_country) %>%
+      filter(!is.na(country)) %>%
+      filter(!is.na(gender)) %>%
       mutate(gender = str_split(gender, pattern = ";")) %>%
       unnest(gender) %>%
       group_by(country, gender) %>%
       summarize(Count = n()) %>%
       arrange(desc(Count)) %>%
       ungroup() %>%
-      mutate(gender = reorder(gender, Count)) %>%
-      filter(country == input$choose_country)
+      mutate(gender = reorder(gender, Count))
   })
 
   country_choice_sex <- reactive({
     dev %>%
-      filter(!is.na(sexual_orientation)) %>%
-      filter(!is.na(country)) %>%
       select(sexual_orientation, country) %>%
+      filter(country == input$choose_country) %>%
+      filter(!is.na(country)) %>%
+      filter(!is.na(sexual_orientation)) %>%
       mutate(sexual_orientation = str_split(sexual_orientation, pattern = ";")) %>%
       unnest(sexual_orientation) %>%
       group_by(country, sexual_orientation) %>%
       summarize(Count = n()) %>%
       arrange(desc(Count)) %>%
       ungroup() %>%
-      mutate(sexual_orientation = reorder(sexual_orientation, Count)) %>%
-      filter(country == input$choose_country)
+      mutate(sexual_orientation = reorder(sexual_orientation, Count))
   })
 
   output$gender <- renderPlot({
@@ -522,216 +526,94 @@ server <- function(input, output, session) {
       coord_flip()
   })
 
-  # Page 2 - Employment / Age by Country
+  ############################################################
+  #   PAGE 2 - Employment / Education by Gender by Country   #
+  ############################################################
 
   category_choice <- reactive({
-    input$rb_choice
+    input$user_category_choice
   })
 
   country_choice <- reactive({
-    input$user_choice
+    input$user_country_choice
   })
 
-  rando <- reactive({
+  change_choice <- reactive({
     list(
-      input$user_choice,
+      input$user_category_choice,
       input$rb_choice
     )
   })
 
-  observeEvent(rando(), {
-    dev_fil <- dev %>%
-      filter(
-        !is.na(country),
-        !is.na(gender),
-        !is.na(employment),
-        !is.na(student)
-      )
-
-    public_data_filtered <- reactive({
-      dev_fil %>%
-        filter(
-          country == input$user_choice,
-          !is.na(gender),
-          !is.na(employment),
-          !is.na(student),
-          !is.na(age)
-        ) %>%
-        mutate(gender = str_split(gender, pattern = ";")) %>%
-        unnest(gender)
-    })
-
-    var_data_filtered <- reactive({
-      dev_fil %>%
-        select(country, !!sym(typer1), gender) %>%
-        group_by(country, !!sym(typer1), gender) %>%
-        count(!!sym(typer1), name = "count") %>%
-        filter(
-          !is.na(country == input$user_choice),
-          !is.na(!!sym(typer1)),
-          !is.na(gender)
-        ) %>%
-        filter(country == input$user_choice) %>%
-        mutate(gender = str_split(gender, pattern = ";")) %>%
-        unnest(gender)
-    })
-
-    typer1 <- case_when(
+  observeEvent(change_choice(), {
+    new_category <- case_when(
       category_choice() == "Employment Status" ~ "employment",
       category_choice() == "Student Status" ~ "student",
       category_choice() == "Age Groups" ~ "age"
     )
 
-    titleboi <- case_when(
-      category_choice() == "Employment Status" ~ "Count of each employemnt status by Country",
-      category_choice() == "Student Status" ~ "Count of each student status by Country",
-      category_choice() == "Age Groups" ~ "Count of each age group by Country"
-    )
+    count_plot_data <- reactive({
+      dev %>%
+        select(country, !!sym(new_category), gender) %>%
+        filter(
+          country == country_choice(),
+          !is.na(country),
+          !is.na(!!sym(new_category)),
+          !is.na(gender)
+        ) %>%
+        mutate(gender = str_split(gender, pattern = ";")) %>%
+        unnest(gender) %>%
+        count(!!sym(new_category), gender, name = "Count")
+    })
 
-    titleboi2 <- case_when(
-      category_choice() == "Employment Status" ~ "Total count of employemnt status of each gender",
-      category_choice() == "Student Status" ~ "Total count of student status of each gender",
-      category_choice() == "Age Groups" ~ "Total count of age group of each gender"
-    )
-
-    xboi <- case_when(
-      category_choice() == "Employment Status" ~ "input$user_choice",
-      category_choice() == "Student Status" ~ "Count of Student Status",
-      category_choice() == "Age Groups" ~ "Count of Age Groups"
-    )
-
-    yboi <- case_when(
-      category_choice() == "Employment Status" ~ "Count of Employemnt Status",
-      category_choice() == "Student Status" ~ "Count of Student Status",
-      category_choice() == "Age Groups" ~ "Count of Age Groups"
-    )
-
-    output$plot1 <- renderPlot({
-      ggplot(data = var_data_filtered(), aes_string(x = typer1, y = "count", fill = "gender")) +
+    output$count_plot <- renderPlot({
+      ggplot(
+        data = count_plot_data(),
+        aes_string(x = new_category, y = "Count", fill = "gender")
+      ) +
         geom_bar(stat = "identity") +
         labs(
           x = "",
-          y = yboi,
-          title = titleboi,
-          subtitle = paste0(country_choice())
+          y = "Respondants",
+          title = paste(category_choice(), " - ", country_choice())
         ) +
         my_theme_sizes +
         gender_fill_colors +
         theme(axis.text.x = element_text(angle = 5, vjust = -0.01))
     })
 
-    get_count <- count(dev, country, gender, name = "count") %>%
-      filter(!is.na(gender)) %>%
-      filter(country == input$user_choice) %>%
-      mutate(gender = str_split(gender, pattern = ";")) %>%
-      unnest(gender) %>%
-      group_by(country, gender) %>%
-      summarise(count = sum(count))
+    gender_counts <- reactive({
+      dev %>%
+        select(country, gender) %>%
+        filter(
+          country == country_choice(),
+          !is.na(country),
+          !is.na(gender)
+        ) %>%
+        mutate(gender = str_split(gender, pattern = ";")) %>%
+        unnest(gender) %>%
+        count(country, gender, name = "Count")
+    })
 
-    output$plot4 <- renderPlot({
-      ggplot(data = get_count) +
-        geom_treemap(aes_string(area = "count", fill = "gender")) +
+    output$gender_counts_plot <- renderPlot({
+      ggplot(data = gender_counts()) +
+        geom_treemap(aes(area = Count, fill = gender)) +
         geom_treemap_text(
-          mapping = aes(label = count, area = count),
+          mapping = aes(label = Count, area = Count),
           colour = "white", reflow = TRUE, place = "centre", size = 15
         ) +
-        labs(x = "", title = titleboi2) +
+        labs(
+          x = "",
+          title = paste("Totals - ", country_choice())
+        ) +
         my_theme_sizes +
         gender_fill_colors
     })
   })
 
-  # Page 3 - Student Analysis by Country
-
-  public_data_filtered2 <- reactive({
-    dev %>%
-      filter(
-        country == input$choice2, !is.na(formal_education),
-        !is.na(undergrad_major), !is.na(student)
-      )
-  })
-
-  output$plot2 <- renderPlot({
-    ggplot(data = public_data_filtered2()) +
-      geom_histogram(
-        mapping = aes(x = formal_education, fill = student),
-        stat = "count"
-      ) +
-      labs(
-        title = paste0(country_choice()),
-        x = "Formal Education",
-        y = "Count of Formal Education Degrees"
-      ) +
-      my_theme_sizes +
-      student_fill_colors
-  })
-
-  output$undergraduate <- renderPlot({
-    ggplot(data = public_data_filtered2()) +
-      geom_histogram(
-        mapping = aes(x = undergrad_major, fill = student),
-        stat = "count"
-      ) +
-      labs(
-        title = paste0(country_choice()),
-        x = "Undergraduate Majors",
-        y = "Count of Education Majors"
-      ) +
-      my_theme_sizes +
-      student_fill_colors +
-      coord_flip()
-  })
-
-  # Page 4 - Salary by Gender
-
-  dist_sal <- dev %>%
-    filter(employment %in% "Employed full-time") %>%
-    filter(gender == "Male" | gender == "Female") %>%
-    group_by(country) %>%
-    mutate(count = n()) %>%
-    filter(count > 1500) %>%
-    filter(!is.na(converted_salary)) %>%
-    ungroup(country)
-
-  output$salary_top_5 <- renderPlot({
-    ggplot(dist_sal) +
-      geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
-      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
-      coord_flip(ylim = c(0, 250000)) +
-      labs(
-        x = "Countries",
-        y = "Converted Salary",
-        title = "Salary of top 5 countries"
-      ) +
-      my_theme_sizes +
-      mf_fill_colors
-  })
-
-  dist_sal2 <- dev %>%
-    filter(employment %in% "Employed full-time") %>%
-    filter(gender == "Male" | gender == "Female") %>%
-    group_by(country) %>%
-    mutate(count = n()) %>%
-    filter(count == 1) %>%
-    filter(!is.na(converted_salary)) %>%
-    ungroup(country)
-
-  output$salary_equal_1 <- renderPlot({
-    ggplot(dist_sal2) +
-      geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
-      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
-      coord_flip(ylim = c(0, 250000)) +
-      labs(
-        x = "Countries",
-        y = "Converted Salary",
-        title = "Salary of countries with only one reported salary"
-      ) +
-      my_theme_sizes +
-      mf_fill_colors
-  })
-
-
-  # Page 5 - Salary Distribution by Gender and Country
+  ############################################################
+  #    PAGE 3 - Salary Distribution by Gender and Country    #
+  ############################################################
 
   salary_data <- dev %>%
     filter(employment == "Employed full-time") %>%
@@ -939,7 +821,181 @@ server <- function(input, output, session) {
       )
   })
 
-  # Page 6 - Coding Years vs Satisfaction
+  ############################################################
+  #          PAGE 4 - Student Analysis by Country            #
+  ############################################################
+
+  student_analysis_data <- reactive({
+    dev %>%
+      filter(
+        country == input$student_analysis_country_choice,
+        !is.na(formal_education),
+        !is.na(undergrad_major),
+        !is.na(student)
+      )
+  })
+
+  output$student_degrees <- renderPlot({
+    ggplot(data = student_analysis_data()) +
+      geom_histogram(
+        mapping = aes(x = formal_education, fill = student),
+        stat = "count"
+      ) +
+      labs(
+        title = input$student_analysis_country_choice,
+        x = "Formal Education",
+        y = "Respondants"
+      ) +
+      my_theme_sizes +
+      student_fill_colors
+  })
+
+  output$undergraduate <- renderPlot({
+    ggplot(data = student_analysis_data()) +
+      geom_histogram(
+        mapping = aes(x = undergrad_major, fill = student),
+        stat = "count"
+      ) +
+      labs(
+        title = input$student_analysis_country_choice,
+        x = "Undergraduate Major",
+        y = "Respondants"
+      ) +
+      my_theme_sizes +
+      student_fill_colors +
+      coord_flip()
+  })
+
+  ############################################################
+  #                PAGE 5 - Salaries by Gender               #
+  ############################################################
+
+  dist_sal <- dev %>%
+    filter(employment %in% "Employed full-time") %>%
+    filter(gender == "Male" | gender == "Female") %>%
+    group_by(country) %>%
+    mutate(count = n()) %>%
+    filter(count > 1500) %>%
+    filter(!is.na(converted_salary)) %>%
+    ungroup(country)
+
+  output$salary_top_5 <- renderPlot({
+    ggplot(dist_sal) +
+      geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
+      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+      coord_flip(ylim = c(0, 250000)) +
+      labs(
+        x = "Countries",
+        y = "Converted Salary",
+        title = "Salary of top 5 countries"
+      ) +
+      my_theme_sizes +
+      mf_fill_colors
+  })
+
+  dist_sal2 <- dev %>%
+    filter(employment %in% "Employed full-time") %>%
+    filter(gender == "Male" | gender == "Female") %>%
+    group_by(country) %>%
+    mutate(count = n()) %>%
+    filter(count == 1) %>%
+    filter(!is.na(converted_salary)) %>%
+    ungroup(country)
+
+  output$salary_equal_1 <- renderPlot({
+    ggplot(dist_sal2) +
+      geom_boxplot(aes(x = country, converted_salary, fill = gender)) +
+      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+      coord_flip(ylim = c(0, 250000)) +
+      labs(
+        x = "Countries",
+        y = "Converted Salary",
+        title = "Salary of countries with only one reported salary"
+      ) +
+      my_theme_sizes +
+      mf_fill_colors
+  })
+
+  ############################################################
+  #          PAGE 6 - Average Salaries by Experience         #
+  ############################################################
+
+  coding_salary_data <- dev %>%
+    filter(employment %in% "Employed full-time") %>%
+    filter(!is.na(converted_salary)) %>%
+    filter(!is.na(years_coding_prof)) %>%
+    select(years_coding_prof, converted_salary) %>%
+    mutate(years_coding_prof = factor(years_coding_prof,
+      levels = c(
+        "0-2 years", "3-5 years", "6-8 years",
+        "9-11 years", "12-14 years", "15-17 years",
+        "18-20 years", "21-23 years", "24-26 years",
+        "27-29 years", "30 or more years"
+      )
+    )) %>%
+    group_by(years_coding_prof)
+
+  output$coding_vs_salary <- renderPlot({
+    ggplot(data = coding_salary_data) +
+      geom_boxplot(
+        mapping = aes(x = years_coding_prof, y = converted_salary),
+        fill = "orange2",
+        notch = TRUE
+      ) +
+      labs(x = "", y = "Salary (Annual USD)") +
+      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+      my_theme_sizes +
+      coord_flip(ylim = c(0, 300000))
+  })
+
+  summ_career_data <- dev %>%
+    filter(employment %in% "Employed full-time") %>%
+    filter(!is.na(converted_salary)) %>%
+    filter(!is.na(career_satisfaction)) %>%
+    select(career_satisfaction, converted_salary) %>%
+    mutate(career_satisfaction = factor(career_satisfaction,
+      levels = c(
+        "Extremely dissatisfied",
+        "Moderately dissatisfied",
+        "Slightly dissatisfied",
+        "Neither satisfied nor dissatisfied",
+        "Slightly satisfied",
+        "Moderately satisfied",
+        "Extremely satisfied"
+      )
+    )) %>%
+    group_by(career_satisfaction) %>%
+    summarize(
+      mean_salary = mean(converted_salary),
+      med_salary = median(converted_salary)
+    )
+
+  reshaped_career <- melt(summ_career_data, id = "career_satisfaction")
+
+  output$salary_satisfaction <- renderPlot({
+    ggplot(
+      data = reshaped_career,
+      aes(x = career_satisfaction, y = value, color = variable)
+    ) +
+      geom_point(size = 3) +
+      geom_point(size = 15, shape = 1, stroke = 3) +
+      labs(x = "", y = "Salary (Annual USD)") +
+      scale_y_continuous(labels = function(x) format(x, scientific = FALSE), limits = c(0, 150000)) +
+      scale_color_manual(
+        labels = c("Mean Salary", "Median Salary"),
+        values = c("darkred", "royalblue4")
+      ) +
+      my_theme_sizes +
+      theme(
+        legend.background = element_rect(fill = "white", size = 0.5, color = "gray"),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12)
+      )
+  })
+
+  ############################################################
+  #          PAGE 7 - Coding Years vs Satisfaction           #
+  ############################################################
 
   coding_prof_vs_job_filter <- reactive({
     dev %>%
@@ -1052,7 +1108,9 @@ server <- function(input, output, session) {
     })
   })
 
-  # Page 7 - Satisfied Long Term Coders
+  ############################################################
+  #              PAGE 8 - Long Term Satisfaction             #
+  ############################################################
 
   job_opacity <- reactive({
     input$job_opacity_input
@@ -1067,6 +1125,8 @@ server <- function(input, output, session) {
   })
 
   dev_code <- dev %>%
+    select(years_coding_prof, job_satisfaction, career_satisfaction) %>%
+    filter(!is.na(years_coding_prof)) %>%
     mutate(years_coding_prof = factor(years_coding_prof,
       levels = c(
         "0-2 years", "3-5 years", "6-8 years",
@@ -1077,32 +1137,28 @@ server <- function(input, output, session) {
     ))
 
   job_across_experience <- dev_code %>%
-    filter(!is.na(years_coding_prof)) %>%
     filter(!is.na(job_satisfaction)) %>%
     group_by(years_coding_prof) %>%
     summarize(job_total = n())
 
   job_data <- reactive({
     dev_code %>%
-      filter(!is.na(years_coding_prof)) %>%
-      filter(!is.na(job_satisfaction)) %>%
       filter(job_satisfaction == satisfaction_choice()) %>%
+      filter(!is.na(job_satisfaction)) %>%
       group_by(years_coding_prof) %>%
       summarize(job_n = n()) %>%
       mutate(percentage = (job_n / job_across_experience$job_total) * 100)
   })
 
   career_across_experience <- dev_code %>%
-    filter(!is.na(years_coding_prof)) %>%
     filter(!is.na(career_satisfaction)) %>%
     group_by(years_coding_prof) %>%
     summarize(career_total = n())
 
   career_data <- reactive({
     dev_code %>%
-      filter(!is.na(years_coding_prof)) %>%
-      filter(!is.na(career_satisfaction)) %>%
       filter(career_satisfaction == satisfaction_choice()) %>%
+      filter(!is.na(career_satisfaction)) %>%
       group_by(years_coding_prof) %>%
       summarize(career_n = n()) %>%
       mutate(percentage = (career_n / career_across_experience$career_total) * 100)
@@ -1126,81 +1182,6 @@ server <- function(input, output, session) {
         y = "% of Respondants"
       ) +
       my_theme_sizes
-  })
-
-  # Page 8 - Salary Considerations
-
-  coding_salary_data <- dev %>%
-    filter(employment %in% "Employed full-time") %>%
-    filter(!is.na(converted_salary)) %>%
-    filter(!is.na(years_coding_prof)) %>%
-    select(years_coding_prof, converted_salary) %>%
-    mutate(years_coding_prof = factor(years_coding_prof,
-      levels = c(
-        "0-2 years", "3-5 years", "6-8 years",
-        "9-11 years", "12-14 years", "15-17 years",
-        "18-20 years", "21-23 years", "24-26 years",
-        "27-29 years", "30 or more years"
-      )
-    )) %>%
-    group_by(years_coding_prof)
-
-  output$coding_vs_salary <- renderPlot({
-    ggplot(data = coding_salary_data) +
-      geom_boxplot(
-        mapping = aes(x = years_coding_prof, y = converted_salary),
-        fill = "orange2",
-        notch = TRUE
-      ) +
-      labs(x = "", y = "Salary (Annual USD)") +
-      scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
-      my_theme_sizes +
-      coord_flip(ylim = c(0, 300000))
-  })
-
-  summ_career_data <- dev %>%
-    filter(employment %in% "Employed full-time") %>%
-    filter(!is.na(converted_salary)) %>%
-    filter(!is.na(career_satisfaction)) %>%
-    select(career_satisfaction, converted_salary) %>%
-    mutate(career_satisfaction = factor(career_satisfaction,
-      levels = c(
-        "Extremely dissatisfied",
-        "Moderately dissatisfied",
-        "Slightly dissatisfied",
-        "Neither satisfied nor dissatisfied",
-        "Slightly satisfied",
-        "Moderately satisfied",
-        "Extremely satisfied"
-      )
-    )) %>%
-    group_by(career_satisfaction) %>%
-    summarize(
-      mean_salary = mean(converted_salary),
-      med_salary = median(converted_salary)
-    )
-
-  reshaped_career <- melt(summ_career_data, id = "career_satisfaction")
-
-  output$salary_satisfaction <- renderPlot({
-    ggplot(
-      data = reshaped_career,
-      aes(x = career_satisfaction, y = value, color = variable)
-    ) +
-      geom_point(size = 3) +
-      geom_point(size = 15, shape = 1, stroke = 3) +
-      labs(x = "", y = "Salary (Annual USD)") +
-      scale_y_continuous(labels = function(x) format(x, scientific = FALSE), limits = c(0, 150000)) +
-      scale_color_manual(
-        labels = c("Mean Salary", "Median Salary"),
-        values = c("darkred", "royalblue4")
-      ) +
-      my_theme_sizes +
-      theme(
-        legend.background = element_rect(fill = "white", size = 0.5, color = "gray"),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 12)
-      )
   })
 } # server
 
