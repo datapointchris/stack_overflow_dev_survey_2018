@@ -2,8 +2,6 @@
 
 # DEPLOY
 # rsconnect::deployApp('2018_stack_overflow_dev_survey') # nolint
-# RUN
-# shiny::runApp('app/dashboard.R') # nolint
 
 library(shiny)
 library(shinydashboard)
